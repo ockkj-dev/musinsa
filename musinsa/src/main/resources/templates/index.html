@@ -1,0 +1,220 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <title>Product APIs</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 20px auto;
+        }
+        h1 {
+            text-align: center;
+            color: #333;
+        }
+        .section {
+            margin-bottom: 40px;
+            padding: 20px;
+            border: 1px solid #ddd;
+            border-radius: 8px;
+            background-color: #f9f9f9;
+        }
+        label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: bold;
+        }
+        input[type="text"], input[type="number"] {
+            width: 100%;
+            padding: 8px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+        }
+        button {
+            padding: 10px 15px;
+            margin: 5px 0;
+            border: none;
+            background-color: #007bff;
+            color: white;
+            cursor: pointer;
+            border-radius: 5px;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        .output {
+            margin-top: 20px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            background: #f4f4f4;
+            white-space: pre-wrap;
+        }
+    </style>
+</head>
+<body>
+    <h1>상품</h1>
+
+    <div class="section">
+        <h2>1. 카테고리별 최저 가격</h2>
+        <button onclick="fetchMinimumPrices()">최저 가격 조회</button>
+        <div id="output-min-prices" class="output">API 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <div class="section">
+        <h2>2. 최저가 브랜드</h2>
+        <button onclick="fetchCheapestProduct()">최저가 브랜드 조회</button>
+        <div id="output-cheapest-brand" class="output">API 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <div class="section">
+        <h2>3. 카테고리별 가격 범위</h2>
+        <label for="category">카테고리 입력:</label>
+        <input type="text" id="category" placeholder="예: 상의, 액세서리">
+        <button onclick="fetchPriceRange()">가격 범위 조회</button>
+        <div id="output-price-range" class="output">API 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <div class="section">
+        <h2>4. 상품 추가/수정</h2>
+        <label for="product-id-update">상품 ID :</label>
+        <input type="text" id="product-id-update" placeholder="상품 ID (미 입력시 상품 추가)">
+        <label for="product-brand">상품 브랜드 :</label>
+        <input type="text" id="product-brand" placeholder="브랜드 입력">
+        <label for="category-name">카테고리:</label>
+        <input type="text" id="category-name" placeholder="카테고리 입력">
+        <label for="price">가격:</label>
+        <input type="number" id="price" placeholder="가격 입력">
+        <button onclick="addOrUpdateProduct()">상품 추가/수정</button>
+        <div id="output-add-product" class="output">API 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <div class="section">
+        <h2>5. 상품 삭제</h2>
+        <label for="product-id">상품 ID:</label>
+        <input type="number" id="product-id" placeholder="상품 ID 입력">
+        <button onclick="deleteProduct()">상품 삭제</button>
+        <div id="output-delete-brand" class="output">API 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <div class="section">
+        <h2>6. 상품 전체 (추가, 수정, 삭제 확인용)</h2>
+        <button onclick="getAllProducts()">전체 상품 조회</button>
+        <div id="output-all-products" class="output">API 결과가 여기에 표시됩니다.</div>
+    </div>
+
+    <script>
+        const apiBase = "http://localhost:8080/api/product";
+
+        function fetchMinimumPrices() {
+            $.ajax({
+                url: `${apiBase}/min-prices`,
+                method: "GET",
+                success: function(data) {
+                    $("#output-min-prices").text(JSON.stringify(data, null, 2));
+                },
+                error: function(err) {
+                    $("#output-min-prices").text("에러 발생: " + JSON.stringify(err));
+                }
+            });
+        }
+
+        function fetchCheapestProduct() {
+            $.ajax({
+                url: `${apiBase}/cheapest-brand`,
+                method: "GET",
+                success: function(data) {
+                    $("#output-cheapest-brand").text(JSON.stringify(data, null, 2));
+                },
+                error: function(err) {
+                    $("#output-cheapest-brand").text("에러 발생: " + JSON.stringify(err));
+                }
+            });
+        }
+
+        function fetchPriceRange() {
+            const category = $("#category").val();
+            if (!category) {
+                alert("카테고리를 입력하세요!");
+                return;
+            }
+            $.ajax({
+                url: `${apiBase}/${category}/price-range`,
+                method: "GET",
+                success: function(data) {
+                    $("#output-price-range").text(JSON.stringify(data, null, 2));
+                },
+                error: function(err) {
+                    $("#output-price-range").text("에러 발생: " + JSON.stringify(err));
+                }
+            });
+        }
+
+        function addOrUpdateProduct() {
+            const id = $("#product-id-update").val();
+            const brand = $("#product-brand").val();
+            const category = $("#category-name").val();
+            const price = parseFloat($("#price").val());
+
+            if (!brand || !category || isNaN(price)) {
+                alert("모든 필드를 입력하세요! (브랜드, 카테고리, 가격)");
+                return;
+            }
+
+            const product = (id != "" && id != null) ? { id, brand, category, price } : { brand, category, price };
+
+            $.ajax({
+                url: `${apiBase}/update`,
+                method: "POST",
+                contentType: "application/json",
+                data: JSON.stringify(product),
+                success: function(data) {
+                    $("#output-add-product").text("상품 추가/수정 성공: " + JSON.stringify(data, null, 2));
+                },
+                error: function(err) {
+                    $("#output-add-product").text("에러 발생: " + JSON.stringify(err));
+                }
+            });
+        }
+
+        function deleteProduct() {
+            const id = $("#product-id").val();
+
+            if (!id) {
+                alert("ID를 입력하세요!");
+                return;
+            }
+
+            $.ajax({
+                url: `${apiBase}/delete/${id}`,
+                method: "DELETE",
+                success: function(data) {
+                    $("#output-delete-brand").text("상품 삭제 성공: " + data);
+                },
+                error: function(err) {
+                    $("#output-delete-brand").text("에러 발생: " + JSON.stringify(err));
+                }
+            });
+        }
+
+        function getAllProducts() {
+            $.ajax({
+                url: `${apiBase}/all`,
+                method: "GET",
+                success: function(data) {
+                    $("#output-all-products").text("상품 조회 성공: " + JSON.stringify(data, null, 2));
+                },
+                error: function(err) {
+                    $("#output-all-products").text("에러 발생: " + JSON.stringify(err));
+                }
+            });
+        }
+
+    </script>
+
+</body>
+</html>
