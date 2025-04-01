@@ -6,6 +6,13 @@
 3. 코드 빌드, 테스트, 실행 방법 제공
 
 
+### 구현범위
+1. 요구사항에 맞는 API
+2. API 확인할 수 있는 시각화 프론트 페이지
+3. 간단한 unit, integration test
+4. h2 database 를 활용한 in-memory database
+
+
 ### 코드 빌드 및 테스트, 실행
 1. 해당 git 을 clone 
 2. 해당 프로젝트 내 musinsa 라는 폴더로 프로젝트 open
