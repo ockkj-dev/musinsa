@@ -69,7 +69,7 @@ public class ProductControllerTest {
 
     @Test
     void shouldAddOrUpdateProduct() {
-        Product product = new Product(1L, "A", "신발", 20000);
+        Product product = new Product(1L, "A", "신발", 20000L);
         when(productService.addOrUpdateProduct(product)).thenReturn(product);
 
         ResponseEntity<Product> response = productController.addOrUpdateProduct(product);
@@ -81,12 +81,15 @@ public class ProductControllerTest {
 
     @Test
     void shouldDeleteProduct() {
+        Map<String, Object> mockResponse = Map.of("status", "success", "message", "정상적으로 삭제되었습니다.");
+        when(productService.deleteProduct(1L)).thenReturn(mockResponse);
+
         Long id = 1L;
 
-        ResponseEntity<String> response = productController.deleteProduct(id);
+        ResponseEntity<Map<String, Object>> response = productController.deleteProduct(id);
 
         assertEquals(200, response.getStatusCodeValue());
-        assertEquals("삭제되었습니다.", response.getBody());
+        assertEquals(mockResponse, response.getBody());
         verify(productService, times(1)).deleteProduct(id);
     }
 }

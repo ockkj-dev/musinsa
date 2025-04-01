@@ -10,7 +10,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.test.context.ActiveProfiles;
 
-import java.util.Map;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -30,7 +29,7 @@ public class ProductControllerIntegrationTest {
         Product product = new Product();
         product.setCategory("상의");
         product.setBrand("A");
-        product.setPrice(100);
+        product.setPrice(100L);
 
         ResponseEntity<Product> response = restTemplate.postForEntity("/api/product/update", product, Product.class);
 
@@ -50,7 +49,7 @@ public class ProductControllerIntegrationTest {
         Product product = new Product();
         product.setCategory("하의");
         product.setBrand("C");
-        product.setPrice(120);
+        product.setPrice(120L);
         product = productRepository.save(product);
 
         Product updatedProduct = new Product();
@@ -58,7 +57,7 @@ public class ProductControllerIntegrationTest {
         updatedProduct.setId(product.getId());
         updatedProduct.setCategory("하의");
         updatedProduct.setBrand("C");
-        updatedProduct.setPrice(130);
+        updatedProduct.setPrice(130L);
 
         restTemplate.postForEntity("/api/product/update", updatedProduct, Product.class);
 
@@ -74,7 +73,7 @@ public class ProductControllerIntegrationTest {
         Product product = new Product();
         product.setCategory("신발");
         product.setBrand("E");
-        product.setPrice(400);
+        product.setPrice(400L);
         product = productRepository.save(product);
 
         restTemplate.delete("/api/product/delete/" + product.getId());

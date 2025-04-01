@@ -14,7 +14,7 @@ public interface ProductService {
 
     Product addOrUpdateProduct(Product product);
 
-    void deleteProduct(Long id);
+    Map<String, Object> deleteProduct(Long id);
 
     List<Map<String, Object>> getAllProducts();
 }

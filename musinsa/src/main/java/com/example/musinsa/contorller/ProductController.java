@@ -60,9 +60,8 @@ public class ProductController {
      * @return 삭제 메시지
      */
     @DeleteMapping("/delete/{id}")
-    public ResponseEntity<String> deleteProduct(@PathVariable Long id) {
-        productService.deleteProduct(id);
-        return ResponseEntity.ok("삭제되었습니다.");
+    public ResponseEntity<Map<String, Object>> deleteProduct(@PathVariable Long id) {
+        return ResponseEntity.ok(productService.deleteProduct(id));
     }
 
     /**
