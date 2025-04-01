@@ -4,6 +4,7 @@ import com.example.musinsa.repository.ProductRepository;
 import com.example.musinsa.model.Product;
 import com.example.musinsa.service.ProductService;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.dao.EmptyResultDataAccessException;
 import org.springframework.stereotype.Service;
 
 import java.util.*;
@@ -46,7 +47,7 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             // 예외 처리: 실패 이유 반환
             response.put("status", "fail");
-            response.put("reason", e.getMessage());
+            response.put("message", e.getMessage());
         }
 
         return response;
@@ -55,68 +56,75 @@ public class ProductServiceImpl implements ProductService {
     @Override
     public Map<String, Object> getCheapestBrandForAllCategories() {
         List<Product> allProducts = productRepository.findAll();
+        Map<String, Object> response = new LinkedHashMap<>();
+        try {
+            // 브랜드별로 카테고리 그룹화
+            Map<String, List<Product>> brandsByName = allProducts.stream()
+                    .collect(Collectors.groupingBy(Product::getBrand));
 
-        // 브랜드별로 카테고리 그룹화
-        Map<String, List<Product>> brandsByName = allProducts.stream()
-                .collect(Collectors.groupingBy(Product::getBrand));
+            String cheapestBrandName = null;
+            long cheapestTotalPrice = Long.MAX_VALUE;
+            List<Product> cheapestBrandDetails = null;
 
-        String cheapestBrandName = null;
-        long cheapestTotalPrice = Long.MAX_VALUE;
-        List<Product> cheapestBrandDetails = null;
+            // 모든 카테고리를 포함하는 브랜드 찾기
+            for (Map.Entry<String, List<Product>> entry : brandsByName.entrySet()) {
+                List<Product> brandItems = entry.getValue();
 
-        // 모든 카테고리를 포함하는 브랜드 찾기
-        for (Map.Entry<String, List<Product>> entry : brandsByName.entrySet()) {
-            List<Product> brandItems = entry.getValue();
+                // 카테고리별 최저가 상품만 선택
+                Map<String, Product> categoryMinPriceMap = brandItems.stream()
+                        .collect(Collectors.toMap(
+                                Product::getCategory,
+                                product -> product,
+                                (p1, p2) -> p1.getPrice() < p2.getPrice() ? p1 : p2 // 동일 카테고리일 경우 최저가 선택
+                        ));
 
-            // 카테고리별 최저가 상품만 선택
-            Map<String, Product> categoryMinPriceMap = brandItems.stream()
-                    .collect(Collectors.toMap(
-                            Product::getCategory,
-                            product -> product,
-                            (p1, p2) -> p1.getPrice() < p2.getPrice() ? p1 : p2 // 동일 카테고리일 경우 최저가 선택
-                    ));
+                // 카테고리별 최저가 상품 리스트 추출
+                List<Product> minPriceProducts = new ArrayList<>(categoryMinPriceMap.values());
 
-            // 카테고리별 최저가 상품 리스트 추출
-            List<Product> minPriceProducts = new ArrayList<>(categoryMinPriceMap.values());
+                // 브랜드가 8개의 카테고리를 모두 포함하는지 확인
+                Set<String> categoriesCovered = minPriceProducts.stream()
+                        .map(Product::getCategory)
+                        .collect(Collectors.toSet());
+                if (categoriesCovered.size() == 8) { // 카테고리가 8개일 경우
+                    long totalPrice = minPriceProducts.stream().mapToLong(Product::getPrice).sum();
 
-            // 브랜드가 8개의 카테고리를 모두 포함하는지 확인
-            Set<String> categoriesCovered = minPriceProducts.stream()
-                    .map(Product::getCategory)
-                    .collect(Collectors.toSet());
-            if (categoriesCovered.size() == 8) { // 카테고리가 8개일 경우
-                long totalPrice = minPriceProducts.stream().mapToLong(Product::getPrice).sum();
-
-                if (totalPrice < cheapestTotalPrice) { // 최저가 브랜드 판단
-                    cheapestBrandName = entry.getKey();
-                    cheapestTotalPrice = totalPrice;
-                    cheapestBrandDetails = minPriceProducts;
+                    if (totalPrice < cheapestTotalPrice) { // 최저가 브랜드 판단
+                        cheapestBrandName = entry.getKey();
+                        cheapestTotalPrice = totalPrice;
+                        cheapestBrandDetails = minPriceProducts;
+                    }
                 }
             }
-        }
 
-        // 결과 데이터를 포맷팅하여 응답에 추가
-        Map<String, Object> response = new LinkedHashMap<>();
-        if (cheapestBrandName != null) {
-            Map<String, Object> cheapestBrandInfo = new LinkedHashMap<>();
-            cheapestBrandInfo.put("브랜드", cheapestBrandName);
+            // 결과 데이터를 포맷팅하여 응답에 추가
 
-            // 카테고리별 정보 생성
-            List<Map<String, String>> categoryInfo = Objects.requireNonNull(cheapestBrandDetails).stream()
-                    .map(product -> {
-                        Map<String, String> categoryData = new LinkedHashMap<>();
-                        categoryData.put("카테고리", product.getCategory());
-                        categoryData.put("가격", String.format("%,d", (product.getPrice())));
-                        return categoryData;
-                    })
-                    .collect(Collectors.toList());
+            if (cheapestBrandName != null) {
+                Map<String, Object> cheapestBrandInfo = new LinkedHashMap<>();
+                cheapestBrandInfo.put("브랜드", cheapestBrandName);
 
-            cheapestBrandInfo.put("카테고리", categoryInfo);
-            cheapestBrandInfo.put("총액", String.format("%,d", (cheapestTotalPrice)));
+                // 카테고리별 정보 생성
+                List<Map<String, String>> categoryInfo = Objects.requireNonNull(cheapestBrandDetails).stream()
+                        .map(product -> {
+                            Map<String, String> categoryData = new LinkedHashMap<>();
+                            categoryData.put("카테고리", product.getCategory());
+                            categoryData.put("가격", String.format("%,d", (product.getPrice())));
+                            return categoryData;
+                        })
+                        .collect(Collectors.toList());
 
-            // 응답에 최저가 정보 추가
-            response.put("최저가", cheapestBrandInfo);
-        } else {
-            response.put("message", "모든 카테고리를 포함하는 브랜드가 없습니다.");
+                cheapestBrandInfo.put("카테고리", categoryInfo);
+                cheapestBrandInfo.put("총액", String.format("%,d", (cheapestTotalPrice)));
+
+                // 응답에 최저가 정보 추가
+                response.put("최저가", cheapestBrandInfo);
+            } else {
+                response.put("status", "fail");
+                response.put("message", "모든 카테고리를 포함하는 브랜드가 없습니다.");
+            }
+        } catch (Exception e) {
+            // 예외 처리: 실패 이유 반환
+            response.put("status", "fail");
+            response.put("message", e.getMessage());
         }
 
         return response;
@@ -177,7 +185,7 @@ public class ProductServiceImpl implements ProductService {
         } catch (Exception e) {
             // 예외 처리
             response.put("status", "fail");
-            response.put("reason", e.getMessage());
+            response.put("message", e.getMessage());
         }
 
         return response;
@@ -189,8 +197,21 @@ public class ProductServiceImpl implements ProductService {
         return productRepository.save(product);
     }
     @Override
-    public void deleteProduct(Long id) {
-        productRepository.deleteById(id);
+    public Map<String, Object> deleteProduct(Long id) {
+        Map<String, Object> response = new LinkedHashMap<>();
+        if (id == null) {
+            response.put("status", "fail");
+            response.put("message", "해당 ID 가 null 입니다.");
+        } else if (productRepository.findById(id).isEmpty()) {
+            response.put("status", "fail");
+            response.put("message", "해당 ID 가 존재하지 않습니다.");
+        } else {
+            productRepository.deleteById(id);
+            response.put("status", "success");
+            response.put("message", "정상적으로 삭제되었습니다.");
+        }
+
+        return response;
     }
 
     // 5. 전체 상품 조회 (추가/수정/삭제 확인용)
